@@ -29,7 +29,6 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -56,10 +55,10 @@ public class Shreeniehu extends LinearOpMode {
     public DcMotor rightMotor;
 
     // Servos
-    public Servo tl, tr; // 4-bar
-    public Servo bl, br; // coaxial 4-bar
-    public Servo w;      // wrist
-    public Servo c;      // claw
+    public Servo topLeft, topRight; // 4-bar
+    public Servo bottomLeft, bottomRight; // coaxial 4-bar
+    public Servo wrist;      // wrist
+    public Servo claw;      // claw
 
     @Override
     public void runOpMode() {
@@ -69,29 +68,31 @@ public class Shreeniehu extends LinearOpMode {
         rightMotor = hardwareMap.get(DcMotor.class, "right");
 
         leftMotor.setDirection(DcMotor.Direction.FORWARD);
-        rightMotor.setDirection(DcMotor.Direction.FORWARD);
+        rightMotor.setDirection(DcMotor.Direction.REVERSE);
 
         // Servos
-        tl = hardwareMap.get(Servo.class, "topleft");
-        tr = hardwareMap.get(Servo.class, "topright");
-        bl = hardwareMap.get(Servo.class, "bottomleft");
-        br = hardwareMap.get(Servo.class, "bottomright");
-        w  = hardwareMap.get(Servo.class, "wrist");
-        c  = hardwareMap.get(Servo.class, "claw");
+        topLeft = hardwareMap.get(Servo.class, "topleft");
+        topRight = hardwareMap.get(Servo.class, "topright");
+        bottomLeft = hardwareMap.get(Servo.class, "bottomleft");
+        bottomRight = hardwareMap.get(Servo.class, "bottomright");
+        wrist = hardwareMap.get(Servo.class, "wrist");
+        claw = hardwareMap.get(Servo.class, "claw");
 
         // Start positions
-        tl.setPosition(0.4);
-        tr.setPosition(0.6);
-        bl.setPosition(0.5);
-        br.setPosition(0.5);
-        w.setPosition(0.8);
-        c.setPosition(0.75);
+        topLeft.setPosition(0.4);
+        topRight.setPosition(0.6);
+        bottomLeft.setPosition(0.5);
+        bottomRight.setPosition(0.5);
+        wrist.setPosition(0.8);
+        claw.setPosition(0.75);
 
         leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftMotor.setPower(0.5);
+        rightMotor.setPower(0.5);
 
         leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -99,29 +100,19 @@ public class Shreeniehu extends LinearOpMode {
         waitForStart();
         boolean lastDpadUp = false;
         boolean lastDpadDown = false;
-        int holdPosition =0;
+//        int holdPosition =0;
+        int slidePos = 0;
+
         while (opModeIsActive()) {
+            double input = -gamepad1.right_stick_y; // negate for intuitive direction
 
-            // SLIDES (right joystick)
-            double input = gamepad1.right_stick_y;
-            double slidePower = -0.25*input;
-
-            if (Math.abs(input)>0.05){
-                leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                leftMotor.setPower(slidePower);
-                rightMotor.setPower(slidePower);
-
-                holdPosition = leftMotor.getCurrentPosition();
-            } else {
-                leftMotor.setTargetPosition(holdPosition);
-                rightMotor.setTargetPosition(holdPosition);
-                leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                leftMotor.setPower(0.5);
-                rightMotor.setPower(0.5);
+            if (Math.abs(input) > 0.05) {
+                slidePos += (int) (10 * input);
+                slidePos = Range.clip(slidePos, 0, 3000); // set max to your slide's range
             }
 
+            leftMotor.setTargetPosition(slidePos);
+            rightMotor.setTargetPosition(slidePos);
 
 
             // 4-BAR ()
@@ -131,13 +122,13 @@ public class Shreeniehu extends LinearOpMode {
             boolean dpadDownPressed = gamepad1.dpad_down;
 
             if (dpadUpPressed && !lastDpadUp) {
-                tl.setPosition(Range.clip(tl.getPosition() + step, 0, 1));
-                tr.setPosition(Range.clip(tr.getPosition() - step, 0, 1));
+                topLeft.setPosition(Range.clip(topLeft.getPosition() + step, 0, 1));
+                topRight.setPosition(Range.clip(topRight.getPosition() - step, 0, 1));
             }
 
             if (dpadDownPressed && !lastDpadDown) {
-                tl.setPosition(Range.clip(tl.getPosition() - step, 0, 1));
-                tr.setPosition(Range.clip(tr.getPosition() + step, 0, 1));
+                topLeft.setPosition(Range.clip(topLeft.getPosition() - step, 0, 1));
+                topRight.setPosition(Range.clip(topRight.getPosition() + step, 0, 1));
             }
 
             lastDpadUp = dpadUpPressed;
@@ -145,38 +136,40 @@ public class Shreeniehu extends LinearOpMode {
 
             // COAXIAL 4-BAR (D-pad)
             if (gamepad1.dpad_left) {
-                bl.setPosition(Range.clip(bl.getPosition() + step/2, 0, 1));
-                br.setPosition(Range.clip(br.getPosition() - step/2, 0, 1));
+                bottomLeft.setPosition(Range.clip(bottomLeft.getPosition() + step/2, 0, 1));
+                bottomRight.setPosition(Range.clip(bottomRight.getPosition() - step/2, 0, 1));
             } else if (gamepad1.dpad_right) {
-                bl.setPosition(Range.clip(bl.getPosition() - step/2, 0, 1));
-                br.setPosition(Range.clip(br.getPosition() + step/2, 0, 1));
+                bottomLeft.setPosition(Range.clip(bottomLeft.getPosition() - step/2, 0, 1));
+                bottomRight.setPosition(Range.clip(bottomRight.getPosition() + step/2, 0, 1));
             }
 
             // WRIST (Y / A)
             if (gamepad1.y) {
-                w.setPosition(0.5);
+                wrist.setPosition(0.5);
             } else if (gamepad1.a) {
-                w.setPosition(0.8);
+                wrist.setPosition(0.8);
             }
 
             // CLAW (X / B)
             if (gamepad1.x) {
-                c.setPosition(0.75); // open
+                claw.setPosition(0.75); // open
             } else if (gamepad1.b) {
-                c.setPosition(0.0); // close
+                claw.setPosition(0.0); // close
             }
 
             // TELEMETRY
-            telemetry.addData("Slides Power", slidePower);
+            telemetry.addData("Slides position", slidePos);
+            telemetry.addData("Slides target", leftMotor.getTargetPosition());
+            telemetry.addData("Slides current", leftMotor.getCurrentPosition());
 
-            telemetry.addData("Top Left (tl)", tl.getPosition());
-            telemetry.addData("Top Right (tr)", tr.getPosition());
+            telemetry.addData("Top Left (tl)", topLeft.getPosition());
+            telemetry.addData("Top Right (tr)", topRight.getPosition());
 
-            telemetry.addData("Bottom Left (bl)", bl.getPosition());
-            telemetry.addData("Bottom Right (br)", br.getPosition());
+            telemetry.addData("Bottom Left (bl)", bottomLeft.getPosition());
+            telemetry.addData("Bottom Right (br)", bottomRight.getPosition());
 
-            telemetry.addData("Wrist", w.getPosition());
-            telemetry.addData("Claw", c.getPosition());
+            telemetry.addData("Wrist", wrist.getPosition());
+            telemetry.addData("Claw", claw.getPosition());
 
             telemetry.update();
 
