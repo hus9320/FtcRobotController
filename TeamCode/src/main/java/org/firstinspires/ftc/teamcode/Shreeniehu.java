@@ -67,8 +67,18 @@ public class Shreeniehu extends LinearOpMode {
         leftMotor  = hardwareMap.get(DcMotor.class, "left");
         rightMotor = hardwareMap.get(DcMotor.class, "right");
 
-        leftMotor.setDirection(DcMotor.Direction.FORWARD);
-        rightMotor.setDirection(DcMotor.Direction.REVERSE);
+        leftMotor.setDirection(DcMotor.Direction.REVERSE);
+        rightMotor.setDirection(DcMotor.Direction.FORWARD);
+
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        //leftMotor.setTargetPosition(0);
+        //rightMotor.setTargetPosition(0);
+
+        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
 
         // Servos
         topLeft = hardwareMap.get(Servo.class, "topleft");
@@ -78,42 +88,149 @@ public class Shreeniehu extends LinearOpMode {
         wrist = hardwareMap.get(Servo.class, "wrist");
         claw = hardwareMap.get(Servo.class, "claw");
 
+        int SLIDES_HOME = 0;
+
+        double TL_HOME = 0.4, TR_HOME = 0.6;
+        double BL_HOME = 0.5, BR_HOME = 0.5;
+        double WRIST_HOME = 0.8, CLAW_HOME = 0.75;
+
+        int SLIDES_MACRO = 6700;
+        double TL_MACRO = 0.67, TR_MACRO = 0.67;
+        double BL_MACRO = 0.67, BR_MACRO = 0.67;
+
         // Start positions
-        topLeft.setPosition(0.4);
-        topRight.setPosition(0.6);
-        bottomLeft.setPosition(0.5);
-        bottomRight.setPosition(0.5);
-        wrist.setPosition(0.8);
-        claw.setPosition(0.75);
+        topLeft.setPosition(TL_HOME);
+        topRight.setPosition(TR_HOME);
+        bottomLeft.setPosition(BL_HOME);
+        bottomRight.setPosition(BR_HOME);
+        wrist.setPosition(WRIST_HOME);
+        claw.setPosition(CLAW_HOME);
 
-        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        leftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        leftMotor.setPower(0.5);
-        rightMotor.setPower(0.5);
-
-        leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        rightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        waitForStart();
-        boolean lastDpadUp = false;
-        boolean lastDpadDown = false;
-//        int holdPosition =0;
         int slidePos = 0;
 
+        boolean lastRB = false;
+        boolean lastLB = false;
+        boolean lastDpadUp = false;
+        boolean lastDpadDown = false;
+        waitForStart();
+
+
         while (opModeIsActive()) {
-            double input = -gamepad1.right_stick_y; // negate for intuitive direction
+
+
+            double input = -gamepad1.right_stick_y; // invert for natural control
+
+            // =======================
+            // MANUAL SLIDE CONTROL
+            // =======================
+            if (Math.abs(input) > 0.05) {
+                slidePos += (int)(input * 20); // speed
+            }
+
+            // =======================
+            // MACRO: EXTEND + ROTATE
+            // =======================
+            boolean rb = gamepad1.right_bumper;
+            if (rb && !lastRB) {
+                slidePos = SLIDES_MACRO;
+
+                topLeft.setPosition(TL_MACRO);
+                topRight.setPosition(TR_MACRO);
+                bottomLeft.setPosition(BL_MACRO);
+                bottomRight.setPosition(BR_MACRO);
+            }
+            lastRB = rb;
+
+            // =======================
+            // RESET / HOME
+            // =======================
+            boolean lb = gamepad1.left_bumper;
+            if (lb && !lastLB) {
+                slidePos = SLIDES_HOME;
+
+                topLeft.setPosition(TL_HOME);
+                topRight.setPosition(TR_HOME);
+                bottomLeft.setPosition(BL_HOME);
+                bottomRight.setPosition(BR_HOME);
+
+                wrist.setPosition(WRIST_HOME);
+                claw.setPosition(CLAW_HOME);
+            }
+            lastLB = lb;
+
+            // Clamp slide range
+            slidePos = Range.clip(slidePos, 0, 3000);
+
+            // Apply to motors (HOLD POSITION)
+            leftMotor.setTargetPosition(slidePos);
+            rightMotor.setTargetPosition(slidePos);
+
+            leftMotor.setPower(0.6);
+            rightMotor.setPower(0.6);
+
+            /*boolean rbPressed = gamepad1.right_bumper;
+
+            if (rbPressed && !lastRB) {
+
+                // Move slides to target height
+                slidePos = SLIDES_MACRO;
+
+                // Top 4-bar (rotate)
+                topLeft.setPosition(TL_MACRO);
+                topRight.setPosition(TR_MACRO);
+
+                // Bottom 4-bar
+                bottomLeft.setPosition(BL_MACRO);
+                bottomRight.setPosition(BR_MACRO);
+            }
+
+            lastRB = rbPressed;
+
+            boolean lbPressed = gamepad1.left_bumper;
+
+            if (lbPressed && !lastLB) {
+
+                // Reset slides
+                slidePos = SLIDES_HOME;
+
+                // Reset arms
+                topLeft.setPosition(TL_HOME);
+                topRight.setPosition(TR_HOME);
+
+                bottomLeft.setPosition(BL_HOME);
+                bottomRight.setPosition(BR_HOME);
+
+                // Reset wrist & claw
+                wrist.setPosition(WRIST_HOME);
+                claw.setPosition(CLAW_HOME);
+            }
+
+            lastLB = lbPressed;
+        /*    double input = gamepad1.right_stick_y; // negate for intuitive direction
 
             if (Math.abs(input) > 0.05) {
                 slidePos += (int) (10 * input);
-                slidePos = Range.clip(slidePos, 0, 3000); // set max to your slide's range
+            }
+
+
+            slidePos = Range.clip(slidePos, 0, 3000); // set max to your slide's range
+            double input = gamepad1.right_stick_y;
+
+            /*if (rbPressed && !lastRB) {
+                slidePos = SLIDES_MACRO;
+            }
+            else if (lbPressed && !lastLB) {
+                slidePos = SLIDES_HOME;
+            }
+            else if (Math.abs(input) > 0.05) {
+                slidePos += (int)(10 * input);
             }
 
             leftMotor.setTargetPosition(slidePos);
             rightMotor.setTargetPosition(slidePos);
+            leftMotor.setPower(0.5);
 
+            rightMotor.setPower(0.5);*/
 
             // 4-BAR ()
             double step = 0.1;
@@ -159,8 +276,10 @@ public class Shreeniehu extends LinearOpMode {
 
             // TELEMETRY
             telemetry.addData("Slides position", slidePos);
+            //telemetry.addData("Slides input", input);
             telemetry.addData("Slides target", leftMotor.getTargetPosition());
-            telemetry.addData("Slides current", leftMotor.getCurrentPosition());
+            telemetry.addData("Slides left currentPos", leftMotor.getCurrentPosition());
+            telemetry.addData("Slides right currentPos", rightMotor.getCurrentPosition());
 
             telemetry.addData("Top Left (tl)", topLeft.getPosition());
             telemetry.addData("Top Right (tr)", topRight.getPosition());
