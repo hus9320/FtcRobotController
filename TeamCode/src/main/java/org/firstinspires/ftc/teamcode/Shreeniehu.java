@@ -94,9 +94,9 @@ public class Shreeniehu extends LinearOpMode {
         double BL_HOME = 0.5, BR_HOME = 0.5;
         double WRIST_HOME = 0.8, CLAW_HOME = 0.75;
 
-        int SLIDES_MACRO = 6700;
-        double TL_MACRO = 0.67, TR_MACRO = 0.67;
-        double BL_MACRO = 0.67, BR_MACRO = 0.67;
+        int SLIDES_MACRO = 2500; //????????????????????????
+        double TL_MACRO = 0., TR_MACRO = 0.;
+        double BL_MACRO = 0., BR_MACRO = 0.;
 
         // Start positions
         topLeft.setPosition(TL_HOME);
